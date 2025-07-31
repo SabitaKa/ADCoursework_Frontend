@@ -13,6 +13,7 @@ import UserAnnouncements from "./pages/Announcements";
 import Navbar from "./components/Navbar";
 import PublicRoute from "./components/PublicRoute";
 import ProtectedRoute from "./components/ProtectedRoute";
+import DevToolsNotice from "./components/DevToolsNotice";
 
 // Admin Pages
 import AdminLayout from "./pages/Admin/AdminLayout";
@@ -94,6 +95,7 @@ function AppRoutes() {
           <Route path="orders" element={<StaffOrders />} />
         </Route>
       </Routes>
+      <DevToolsNotice />
     </>
   );
 }

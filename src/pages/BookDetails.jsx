@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useCart } from '../context/CartContext';
 
 const BookDetails = () => {
+  const navigate = useNavigate();
   const { id } = useParams();
   const [book, setBook] = useState(null);
   const [quantity, setQuantity] = useState(1);
@@ -39,6 +40,8 @@ const BookDetails = () => {
 
         const response = await axios.get(`https://localhost:7098/api/books/${id}`, { headers });
         if (response.data.success) {
+          console.log('Book data received:', response.data.data);
+          console.log('Discount percentage:', response.data.data.discountPercentage);
           setBook(response.data.data);
           // Check if book is in wishlist
           checkWishlistStatus(response.data.data.id);
@@ -99,14 +102,12 @@ const BookDetails = () => {
       if (response.data.success) {
         const userReview = response.data.data.find(review => review.bookId === bookId);
         if (userReview) {
-          console.log('Found user review:', userReview); // Debug log
           setUserReview(userReview);
           setReviewForm({
             rating: userReview.rating,
             comment: userReview.comment
           });
         } else {
-          console.log('No review found for this book'); // Debug log
           setUserReview(null);
         }
       }
@@ -179,11 +180,46 @@ const BookDetails = () => {
   };
 
   const handleAddToCart = async () => {
-    if (book.stockQuantity <= 0) return;
+    if (book.stockQuantity <= 0) {
+      setCartError('This book is out of stock.');
+      return;
+    }
+    
+    if (!book.isAvailable) {
+      setCartError('This book is not available for purchase.');
+      return;
+    }
+    
+    // Check if user is logged in and has Member role
+    const token = localStorage.getItem('token');
+    const userRole = localStorage.getItem('role');
+    
+    if (!token) {
+      setCartError('You must be logged in to add items to cart.');
+      return;
+    }
+    
+    if (userRole !== 'Member') {
+      setCartError('Cart functionality is only available for Member users.');
+      return;
+    }
     
     try {
       setIsAddingToCart(true);
       setCartError(null);
+      
+      // Validate book data before sending
+      if (!book.id) {
+        setCartError('Invalid book data. Please refresh the page and try again.');
+        return;
+      }
+      
+      console.log('Book data being sent to cart:', {
+        id: book.id,
+        title: book.title,
+        price: book.price,
+        quantity: quantity
+      });
       
       await addToCart({
         id: book.id,
@@ -198,6 +234,7 @@ const BookDetails = () => {
       });
       
       // Show success message
+      showNotification(`${book.title} added to cart successfully!`);
     } catch (error) {
       console.error('Error adding to cart:', error);
       setCartError(error.message || 'Failed to add to cart. Please try again.');
@@ -350,6 +387,25 @@ const BookDetails = () => {
     }
   };
 
+  const handleBuyNow = async () => {
+    try {
+      await addToCart({
+        id: book.id,
+        title: book.title,
+        author: book.authorName,
+        price: book.price,
+        format: book.format || 'Paperback',
+        img: book.coverImageUrl,
+        quantity: quantity,
+        discountPercentage: book.discountPercentage || 0,
+        originalPrice: book.price
+      });
+      navigate('/checkout');
+    } catch (error) {
+      showNotification('Failed to proceed to checkout. Please try again.', 'error');
+    }
+  };
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-gray-50">Loading...</div>;
   }
@@ -364,6 +420,17 @@ const BookDetails = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
+      {/* Back Arrow */}
+      <button
+        onClick={() => navigate('/bookcatalog')}
+        className="flex items-center gap-2 text-blue-700 hover:text-blue-900 font-medium mb-4 focus:outline-none"
+        style={{ fontSize: '1.1rem' }}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+        Back to Catalog
+      </button>
       <div className="max-w-7xl mx-auto">
         <div className="bg-white rounded-xl shadow-2xl overflow-hidden mb-8">
           <div className="flex flex-col lg:flex-row">
@@ -415,71 +482,125 @@ const BookDetails = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Price, Stock Status, and Quantity - Positioned below the image */}
+                <div className="mt-6 space-y-3">
+                  {/* Price */}
+                  <div className="text-center">
+                    {book.discountPercentage > 0 ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="text-2xl font-bold text-gray-900">
+                          ${calculateDiscountedPrice().toFixed(2)}
+                        </span>
+                        <span className="text-lg text-gray-500 line-through">
+                          ${book.price.toFixed(2)}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-2xl font-bold text-gray-900">
+                        {book.price ? `$${book.price.toFixed(2)}` : 'Price not available'}
+                      </span>
+                    )}
+                  </div>
+
+                
+                </div>
               </div>
             </div>
 
             {/* Book Details Section */}
             <div className="lg:w-3/5 p-6 md:p-8">
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-start mb-6">
                 <div>
                   <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{book.title}</h1>
-                  <p className="text-xl text-indigo-600 font-medium mb-4">by {book.authorName}</p>
+                  <p className="text-xl text-indigo-600 font-medium mb-2">by {book.authorName}</p>
+                  {book.reviews && book.reviews.length > 0 && (
+                    <div className="flex items-center">
+                      <div className="flex items-center text-yellow-400 mr-2">
+                        {[...Array(5)].map((_, i) => (
+                          <svg 
+                            key={i} 
+                            xmlns="http://www.w3.org/2000/svg" 
+                            className="h-5 w-5" 
+                            fill={i < Math.round(book.reviews.reduce((acc, review) => acc + review.rating, 0) / book.reviews.length) ? 'currentColor' : 'none'} 
+                            viewBox="0 0 24 24" 
+                            stroke="currentColor"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                          </svg>
+                        ))}
+                      </div>
+                      <span className="text-gray-700 font-medium">
+                        ({book.reviews.length > 0 ? (book.reviews.reduce((acc, review) => acc + review.rating, 0) / book.reviews.length).toFixed(1) : '0.0'})
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${book.stockQuantity > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                   {book.stockQuantity > 0 ? 'In Stock' : 'Out of Stock'}
                 </span>
               </div>
 
-              <div className="my-6 flex items-center">
-                {book.discountPercentage > 0 ? (
-                  <>
-                    <span className="text-3xl font-bold text-gray-900 mr-2">
-                      ${calculateDiscountedPrice().toFixed(2)}
-                    </span>
-                    <span className="text-xl text-gray-500 line-through">
-                      ${book.price.toFixed(2)}
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-3xl font-bold text-gray-900">
-                    {book.price ? `$${book.price.toFixed(2)}` : 'Price not available'}
-                  </span>
-                )}
+              {/* About the Book Section */}
+              <div className="mb-8">
+                <h2 className="text-xl font-bold text-gray-900 mb-3">About the Book</h2>
+                <p className="text-gray-700 leading-relaxed">{book.description}</p>
               </div>
 
-              <p className="text-gray-700 leading-relaxed mb-6">{book.description}</p>
+              {/* Book Details and Technical Details Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                {/* Book Details Section */}
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">Book Details</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-700">Publisher:</span>
+                      <span className="text-gray-900">{book.publisherName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-700">Language:</span>
+                      <span className="text-gray-900">{book.language}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-700">Genre:</span>
+                      <span className="text-gray-900">{book.genres && book.genres.join(', ')}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-700">Format:</span>
+                      <span className="text-gray-900">{book.format}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-700">Publication Date:</span>
+                      <span className="text-gray-900">{new Date(book.publicationDate).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-700">Award Winner:</span>
+                      <span className="text-gray-900">{book.isAwardWinner ? 'Yes' : 'No'}</span>
+                    </div>
+                  </div>
+                </div>
 
-              {/* ISBN and Format */}
-              <div className="flex flex-wrap gap-4 mb-4">
-                <div className="bg-blue-50 px-3 py-1 rounded-full text-sm font-medium text-blue-700">
-                  ISBN: {book.isbn}
-                </div>
-                <div className="bg-indigo-50 px-3 py-1 rounded-full text-sm font-medium text-indigo-700">
-                  Format: {book.format}
-                </div>
-              </div>
-
-              {/* Book Metadata */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="text-sm font-medium text-gray-500">Publisher</h3>
-                  <p className="mt-1 text-sm font-medium text-gray-900">{book.publisherName}</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="text-sm font-medium text-gray-500">Published Date</h3>
-                  <p className="mt-1 text-sm font-medium text-gray-900">
-                    {new Date(book.publicationDate).toLocaleDateString()}
-                  </p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="text-sm font-medium text-gray-500">Genre</h3>
-                  <p className="mt-1 text-sm font-medium text-gray-900">
-                    {book.genres && book.genres.join(', ')}
-                  </p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="text-sm font-medium text-gray-500">Language</h3>
-                  <p className="mt-1 text-sm font-medium text-gray-900">{book.language}</p>
+                {/* Technical Details Section */}
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">Technical Details</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-700">ISBN:</span>
+                      <span className="text-gray-900">{book.isbn}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-700">Stock:</span>
+                      <span className="text-gray-900">{book.stockQuantity} copies</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-700">Available:</span>
+                      <span className="text-gray-900">{book.isAvailable ? 'Yes' : 'No'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-700">Added to System:</span>
+                      <span className="text-gray-900">{new Date(book.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -504,7 +625,7 @@ const BookDetails = () => {
                 </div>
 
                 <button 
-                  className={`px-6 py-3 rounded-lg font-medium transition-all ${
+                  className={`px-6 py-3 rounded-lg font-medium transition-all flex items-center gap-2 ${
                     book.stockQuantity > 0 
                       ? isAddingToCart
                         ? 'bg-gray-400 cursor-wait'
@@ -514,7 +635,22 @@ const BookDetails = () => {
                   disabled={book.stockQuantity <= 0 || isAddingToCart}
                   onClick={handleAddToCart}
                 >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m6 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
+                  </svg>
                   {isAddingToCart ? 'Adding...' : book.stockQuantity > 0 ? 'Add to Cart' : 'Out of Stock'}
+                </button>
+
+                <button 
+                  className={`px-6 py-3 rounded-lg font-medium transition-all ${
+                    book.stockQuantity > 0 
+                      ? 'bg-green-600 text-white hover:bg-green-700 shadow-md hover:shadow-lg'
+                      : 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                  }`}
+                  disabled={book.stockQuantity <= 0}
+                  onClick={handleBuyNow}
+                >
+                  Buy Now
                 </button>
               </div>
 
@@ -527,39 +663,7 @@ const BookDetails = () => {
           </div>
         </div>
 
-        {/* Additional Details Section */}
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
-          <div className="border-b border-gray-200">
-            <div className="p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Additional Details</h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Book Information</h3>
-                  <ul className="space-y-2 text-gray-600">
-                    <li><span className="font-medium">ID:</span> {book.id}</li>
-                    <li><span className="font-medium">ISBN:</span> {book.isbn}</li>
-                    <li><span className="font-medium">Format:</span> {book.format}</li>
-                    <li><span className="font-medium">Language:</span> {book.language}</li>
-                    <li><span className="font-medium">Stock:</span> {book.stockQuantity} copies</li>
-                    <li><span className="font-medium">Available:</span> {book.isAvailable ? 'Yes' : 'No'}</li>
-                  </ul>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Publication Details</h3>
-                  <ul className="space-y-2 text-gray-600">
-                    <li><span className="font-medium">Publisher:</span> {book.publisherName}</li>
-                    <li><span className="font-medium">Author:</span> {book.authorName}</li>
-                    <li><span className="font-medium">Publication Date:</span> {new Date(book.publicationDate).toLocaleDateString()}</li>
-                    <li><span className="font-medium">Genre:</span> {book.genres && book.genres.join(', ')}</li>
-                    <li><span className="font-medium">Award Winner:</span> {book.isAwardWinner ? 'Yes' : 'No'}</li>
-                    <li><span className="font-medium">Added to System:</span> {new Date(book.createdAt).toLocaleDateString()}</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+
 
         {/* Reviews Section - Updated UI */}
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">

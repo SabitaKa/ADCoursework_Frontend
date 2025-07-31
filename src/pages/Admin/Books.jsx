@@ -233,6 +233,18 @@ const Books = () => {
 
     try {
       const token = localStorage.getItem("token")
+      const userRole = localStorage.getItem("role")
+      
+      if (!token) {
+        showToast('You must be logged in to delete books', 'error')
+        return
+      }
+
+      if (userRole !== 'Admin') {
+        showToast('Only Admin users can delete books', 'error')
+        return
+      }
+
       await axios.delete(`https://localhost:7098/api/books/${id}/delete`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -243,8 +255,20 @@ const Books = () => {
     } catch (error) {
       console.error("Error deleting book:", error)
       
-      // Check if it's a foreign key constraint error
-      if (error.response?.data?.errors?.innerException?.message?.includes('violates foreign key constraint')) {
+      // Handle specific error cases
+      if (error.response?.status === 401) {
+        showToast('Your session has expired. Please log in again.', 'error')
+        // Clear invalid authentication data
+        localStorage.removeItem('token')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('userId')
+        localStorage.removeItem('role')
+        localStorage.removeItem('user')
+        // Redirect to login
+        window.location.href = '/login'
+      } else if (error.response?.status === 403) {
+        showToast('Access denied. Only Admin users can delete books.', 'error')
+      } else if (error.response?.data?.errors?.innerException?.message?.includes('violates foreign key constraint')) {
         showToast('Cannot delete this book because it has been ordered by customers. Consider marking it as unavailable instead.', 'error')
       } else {
         showToast(error.response?.data?.message || 'Error deleting book', 'error')

@@ -187,48 +187,49 @@ const ProfileInfo = () => {
   return (
     <div className="bg-gray-50 min-h-screen">
       <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="relative bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl p-6 mb-8 shadow-lg">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mt-10 -mr-10"></div>
-          <div className="flex flex-row items-center space-x-6">
-            <div className="bg-white rounded-full p-1 shadow-md">
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white text-3xl font-bold">
-                {getInitials(userData?.fullName)}
-              </div>
-            </div>
-            <div className="flex-1 text-left">
-              <h1 className="text-3xl font-bold text-white">{userData?.fullName}</h1>
-              <p className="text-blue-100 mt-1">@{userData?.username}</p>
-              {userData?.isEligibleForLoyaltyDiscount && (
-                <div className="mt-3 bg-white/20 inline-flex items-center px-3 py-1 rounded-full text-white">
-                  <CheckCircle size={16} className="mr-1" />
-                  <span>Loyalty Member</span>
-                </div>
-              )}
-            </div>
-            <div>
-              <button 
-                onClick={() => setIsEditing(!isEditing)}
-                className={`px-4 py-2 rounded-lg transition-colors shadow-md flex items-center space-x-2 ${
-                  isEditing 
-                    ? 'bg-white text-red-600 hover:bg-gray-100' 
-                    : 'bg-white text-blue-600 hover:bg-blue-50'
-                }`}
-              >
-                {isEditing ? (
-                  <>
-                    <X size={18} />
-                    <span>Cancel</span>
-                  </>
-                ) : (
-                  <>
-                    <Edit2 size={18} />
-                    <span>Edit Profile</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
+        <div className="relative bg-gradient-to-r from-blue-500 to-pink-600 p-6 mb-8 shadow-lg">
+  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 -mt-10 -mr-10"></div>
+  <div className="flex flex-row items-center space-x-6">
+    <div className="bg-white p-1 shadow-md">
+      <div className="w-24 h-24 bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white text-3xl font-bold">
+        {getInitials(userData?.fullName)}
+      </div>
+    </div>
+    <div className="flex-1 text-left">
+      <h1 className="text-3xl font-bold text-white">{userData?.fullName}</h1>
+      <p className="text-blue-100 mt-1">@{userData?.username}</p>
+      {userData?.isEligibleForLoyaltyDiscount && (
+        <div className="mt-3 bg-white/20 inline-flex items-center px-3 py-1 text-white">
+          <CheckCircle size={16} className="mr-1" />
+          <span>Loyalty Member</span>
         </div>
+      )}
+    </div>
+    <div>
+      <button 
+        onClick={() => setIsEditing(!isEditing)}
+        className={`px-4 py-2 transition-colors shadow-md flex items-center space-x-2 ${
+          isEditing 
+            ? 'bg-white text-red-600 hover:bg-gray-100' 
+            : 'bg-white text-blue-600 hover:bg-blue-50'
+        }`}
+      >
+        {isEditing ? (
+          <>
+
+            <X size={18} />
+            <span>Cancel</span>
+          </>
+        ) : (
+          <>
+            <Edit2 size={18} />
+            <span>Edit Profile</span>
+          </>
+        )}
+      </button>
+    </div>
+  </div>
+</div>
         
         {/* Alerts */}
         {error && (
@@ -427,13 +428,7 @@ const ProfileInfo = () => {
                             </p>
                           </div>
                           
-                          <div className="bg-gray-50 p-4 rounded-lg">
-                            <div className="flex items-center">
-                              <Package size={18} className="text-blue-600 mr-2" />
-                              <h4 className="text-sm font-medium text-gray-500">Total Orders</h4>
-                            </div>
-                            <p className="text-left mt-1 text-lg font-medium text-gray-900">{userData?.totalOrdersCompleted || 0}</p>
-                          </div>
+                          
                         </div>
                       </div>
                     )}
@@ -550,7 +545,7 @@ const ProfileInfo = () => {
                       </div>
                       <div className="ml-3">
                         <h4 className="text-left text-sm font-medium text-gray-800">Regular Member</h4>
-                        <p className="text-left mt-1 text-sm text-gray-600">Complete more orders to unlock loyalty benefits.</p>
+  
                       </div>
                     </div>
                   </div>
@@ -570,17 +565,7 @@ const ProfileInfo = () => {
                   </div>
                 </div>
                 
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-start">
-                    <div className="flex-shrink-0">
-                      <Package size={20} className="text-gray-500" />
-                    </div>
-                    <div className="ml-3">
-                      <h4 className="text-sm font-medium text-gray-800">Orders Completed</h4>
-                      <p className="text-left mt-1 text-sm text-gray-600">{userData?.totalOrdersCompleted || 0}</p>
-                    </div>
-                  </div>
-                </div>
+              
               </div>
             </div>
           </div>
@@ -757,7 +742,7 @@ const OrderHistory = () => {
           <div>
             <h1 className="text-3xl font-bold text-gray-800 flex items-center">
               <ShoppingBag className="mr-3 text-blue-600" /> 
-              Order History
+              My Orders
             </h1>
             <p className="text-gray-500 mt-2">View and manage your previous orders</p>
           </div>
@@ -920,7 +905,7 @@ const OrderHistory = () => {
                             ) : order.status.toLowerCase() === 'pending' ? (
                               <button
                                 onClick={() => handleCancelOrder(order)}
-                                className="flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors w-full disabled:opacity-60 disabled:cursor-not-allowed"
+                                className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-red-700 transition-colors w-full disabled:opacity-60 disabled:cursor-not-allowed"
                                 disabled={cancellingOrderId === order.id}
                               >
                                 {cancellingOrderId === order.id ? 'Cancelling...' : 'Cancel'}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import FilterPanel from '../components/FilterPanel';
 import CategoryTabs from '../components/CategoryTabs';
-import { FaHeart, FaShoppingCart, FaStar } from 'react-icons/fa';
+import { FaHeart, FaShoppingCart, FaStar, FaFilter } from 'react-icons/fa';
 import { useCart } from '../context/CartContext';
 import axios from 'axios';
 
@@ -44,6 +44,7 @@ const BookCatalog = () => {
     languages: [],
     publishers: []
   });
+  const [showFilterPanel, setShowFilterPanel] = useState(true); // default to true for desktop
 
   // Add debounce function
   const debounce = (func, delay) => {
@@ -153,6 +154,14 @@ const BookCatalog = () => {
         
         const booksData = response.data.data?.items || [];
         const metadata = response.data.data?.metadata || {};
+        
+        // Debug logging
+        console.log('Books data received:', booksData);
+        booksData.forEach(book => {
+          if (book.discountPercentage > 0) {
+            console.log(`Book with discount: ${book.title} - ${book.discountPercentage}% off`);
+          }
+        });
         
         setBooks(booksData);
         setTotalItems(metadata.totalItems || 0);
@@ -284,13 +293,27 @@ const BookCatalog = () => {
         />
 
         <div className="flex flex-col lg:flex-row gap-6">
-          <FilterPanel 
-            filters={filters}
-            setFilters={setFilters}
-          />
+          {/* Filter Icon and Panel */}
+          <div className="flex flex-col">
+            <button
+              className="flex items-center gap-2 mb-4 px-3 py-2 rounded-md bg-white shadow hover:bg-gray-100 text-gray-700 focus:outline-none"
+              onClick={() => setShowFilterPanel((prev) => !prev)}
+              style={{ width: 'fit-content' }}
+            >
+              <FaFilter className="h-5 w-5" />
+              <span className="hidden sm:inline">Filter</span>
+            </button>
+            {showFilterPanel && (
+              <FilterPanel 
+                filters={filters}
+                setFilters={setFilters}
+              />
+            )}
+          </div>
 
           <div className="flex-1">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
+              {/* Search box remains unchanged */}
               <input
                 type="text"
                 placeholder="Search books by title or description..."
@@ -384,20 +407,7 @@ const BookCatalog = () => {
                             )}
                           </div>
                           
-                          <div className="mt-3 text-xs text-gray-500 space-y-1">
-                            <p className="truncate flex items-center gap-1">
-                              <span className="font-medium">Format:</span> 
-                              <span className="bg-gray-100 px-2 py-0.5 rounded-full">{book.format || 'Paperback'}</span>
-                            </p>
-                            <p className="truncate flex items-center gap-1">
-                              <span className="font-medium">Publisher:</span> 
-                              <span className="bg-gray-100 px-2 py-0.5 rounded-full">{book.publisherName || 'Unknown Publisher'}</span>
-                            </p>
-                            <p className="flex items-center gap-1">
-                              <span className="font-medium">Language:</span> 
-                              <span className="bg-gray-100 px-2 py-0.5 rounded-full">{book.language || 'English'}</span>
-                            </p>
-                          </div>
+
                         </div>
                       </div>
 
@@ -410,13 +420,13 @@ const BookCatalog = () => {
                               addToWishlist(book);
                             }}
                           >
-                            <FaHeart className="text-red-500" /> 
-                            <span>Save</span>
+                           <FaHeart className="text-red-600 text-1xl" />
+                            <span> Wishlist</span>
                           </button>
                           <button
                             className={`flex items-center gap-1 px-4 py-2 rounded-md text-sm text-white transition-colors ${
                               book.isAvailable
-                                ? 'bg-[#0F4C81] hover:bg-[#0d3e6a]'
+                                ? 'bg-blue-600 hover:bg-blue-700'
                                 : 'bg-gray-400 cursor-not-allowed'
                             }`}
                             disabled={!book.isAvailable}

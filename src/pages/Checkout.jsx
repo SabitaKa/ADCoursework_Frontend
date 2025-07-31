@@ -139,7 +139,7 @@ export default function CheckoutPage() {
           {/* Order Details */}
           <div className="bg-white p-0 rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
             <div className="bg-gradient-to-r from-blue-600 to-blue-400 px-8 py-5">
-              <h2 className="text-2xl font-bold text-white tracking-wide">Order Details</h2>
+              <h2 className="text-2xl font-bold text-white tracking-wide">Order Summary</h2>
             </div>
             <div className="space-y-4 max-h-72 overflow-y-auto bg-blue-50 px-8 py-6">
               {summary.items.map(item => (
