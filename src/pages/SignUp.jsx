@@ -99,13 +99,6 @@ const SignUp = () => {
       }
     }
   };
-  const payload = {
-    email: formData.email,
-    username: formData.username,
-    password: formData.password,
-    confirmPassword: formData.confirmPassword,
-    };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -155,11 +148,12 @@ const SignUp = () => {
 
     // If no errors, proceed with the API call
     try {
-      // Create the payload with only the required fields
+      // Create the payload with all required fields including ConfirmPassword
       const payload = {
         email: formData.email.trim().toLowerCase(),
         username: formData.username.trim(),
-        password: formData.password
+        password: formData.password,
+        confirmPassword: formData.confirmPassword
       };
 
       // Log the payload for debugging (remove in production)
